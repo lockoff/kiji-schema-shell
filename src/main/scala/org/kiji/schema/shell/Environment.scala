@@ -31,6 +31,15 @@ import org.kiji.schema.shell.spi.ParserPluginFactory
 
 /**
  * Runtime environment in which DDL commands are executed.
+ *
+ * @param instanceURI of the Kiji instance commands executed under this environment will use.
+ * @param printer that commands executed under this environment will write output to.
+ * @param kijiSystem that commands executed under this environment will use to interact with Kiji.
+ * @param inputSource from which commands executed under this environment will read input.
+ * @param modules loaded under the environment.
+ * @param libJars that commands executed under this environment will have access to.
+ * @param isInteractive is `true` if commands executed under this environment should be in
+ *     interactive mode, `false` if in batch mode.
  */
 @ApiAudience.Framework
 @ApiStability.Evolving
@@ -41,6 +50,7 @@ final class Environment(
     val kijiSystem: AbstractKijiSystem = new KijiSystem,
     val inputSource: InputSource = new JLineInputSource,
     val modules: List[ParserPluginFactory] = List(),
+    val libJars: List[JarLocation] = List(),
     val isInteractive: Boolean = false) {
 
   /**
@@ -48,19 +58,21 @@ final class Environment(
    */
   def withInstance(newInstance: String): Environment = {
     return new Environment(KijiURI.newBuilder(instanceURI).withInstanceName(newInstance).build(),
-        printer, kijiSystem, inputSource, modules, isInteractive)
+        printer, kijiSystem, inputSource, modules, libJars, isInteractive)
   }
 
   /**
    * @return a new Environment with the printer replaced with 'newPrinter'.
    */
   def withPrinter(newPrinter: PrintStream): Environment = {
-    return new Environment(instanceURI, newPrinter, kijiSystem, inputSource, modules, isInteractive)
+    return new Environment(instanceURI, newPrinter, kijiSystem, inputSource, modules,
+        libJars, isInteractive)
   }
 
   /** @return a new Environment with the InputSource replaced with newSource. */
   def withInputSource(newSource: InputSource): Environment = {
-    return new Environment(instanceURI, printer, kijiSystem, newSource, modules, isInteractive)
+    return new Environment(instanceURI, printer, kijiSystem, newSource, modules,
+        libJars, isInteractive)
   }
 
   /**
@@ -78,7 +90,25 @@ final class Environment(
     } else {
       val newModules = modules :+ module // new list, with module appended to modules.
       return new Environment(instanceURI, printer, kijiSystem, inputSource,
-          newModules, isInteractive)
+          newModules, libJars, isInteractive)
+    }
+  }
+
+  /**
+   * Creates a new environment with the specified jar location appended to the list of library
+   * jars used by commands executed under the environment. If the specified library jar is already
+   * in use, this environment is returned.
+   *
+   * @param newJar to include in the new environment.
+   * @return a new environment that uses the specified library jar, or this environment if the jar
+   *     was already in use.
+   */
+  def withLibJar(newJar: JarLocation): Environment = {
+    if (libJars.contains(newJar)) {
+      this
+    } else {
+      new Environment(instanceURI, printer, kijiSystem, inputSource, modules, libJars :+ newJar,
+          isInteractive)
     }
   }
 
@@ -86,13 +116,13 @@ final class Environment(
    * Return a new Environment with the interactivity flag set to the value of the argument
    * to this method.
    *
-   * @param is true if this is run from an interactive terminal, false if from a script
-   *    or API usage.
+   * @param interactiveFlag true if this is run from an interactive terminal,
+   *     false if from a script or API usage.
    * @return an Environment with the isInteractive flag set to the argument value.
    */
   def withInteractiveFlag(interactiveFlag: Boolean): Environment = {
     return new Environment(instanceURI, printer, kijiSystem, inputSource, modules,
-        interactiveFlag)
+        libJars, interactiveFlag)
   }
 
   /**

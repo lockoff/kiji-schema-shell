@@ -214,6 +214,7 @@ class TestParserPlugins extends SpecificationWithJUnit {
         new MockKijiSystem(),
         new NullInputSource,
         List(),
+        List(),
         false))
   }
 }

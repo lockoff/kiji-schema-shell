@@ -180,6 +180,7 @@ class TestClient extends SpecificationWithJUnit {
         new KijiSystem,
         new NullInputSource(),
         List(),
+        List(),
         false)
   }
 }
